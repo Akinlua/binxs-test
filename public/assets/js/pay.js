@@ -92,7 +92,9 @@ function payWithPaystack(email, phone, amount, name, plan) {
           "; expires=" +
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
           "; path=/";
-        const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
+        // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
+        const apiUrl = `/api/request?phone=${phone}`;
+
 
         // Make a GET request to the API
         fetch(apiUrl)
@@ -213,7 +215,9 @@ document
             "; expires=" +
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
             "; path=/";
-          const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
+          // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
+          const apiUrl = `/api/request?phone=${phone}`;
+
 
           // Make a GET request to the API
           fetch(apiUrl)
@@ -286,7 +290,9 @@ btn.addEventListener("click", () => {
         text: "The OTP code is invalid or has expired. Please check again",
       });
     } else {
-      const apiUrl = `http://binxai.tekcify.com:4000/verify?phone=${phoneNumber}&subscription=${subPlan}&code=${otpValue.trim()}`;
+      // const apiUrl = `http://binxai.tekcify.com:4000/verify?phone=${phoneNumber}&subscription=${subPlan}&code=${otpValue.trim()}`;
+      const apiUrl = `/api/verify?phone=${phoneNumber}&subscription=${subPlan}&code=${otpValue.trim()}`;
+
 
       fetch(apiUrl)
         .then((response) => response.json())
