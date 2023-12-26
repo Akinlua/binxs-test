@@ -10,7 +10,7 @@ btn = document.getElementById("continueBtn");
 subPlan = "Basic";
 btnText = "Continue";
 hasPaid = false;
-
+let no_days_left_ = 30
 const cookieName = "hasSubscribed";
 const cookieName2 = "sub_number";
 const cookieName3 = "hasSubscribedTruly";
@@ -113,7 +113,7 @@ function payWithPaystack(email, phone, amount, plan, no_days_left) {
         btn.innerHTML = btnText;
         document.cookie =
           "hasSubscribed=true; expires=" +
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+          new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
           "; path=/";
         console.log("plan", plan)
         if(plan == "Basic"){
@@ -121,7 +121,7 @@ function payWithPaystack(email, phone, amount, plan, no_days_left) {
               "sub_number=" +
               phone +
               "; expires=" +
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
               "; path=/";
           }
           if(plan == "Premium"){
@@ -129,13 +129,13 @@ function payWithPaystack(email, phone, amount, plan, no_days_left) {
               "sub_number=" +
               phone +
               "; expires=" +
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
               "; path=/";
               document.cookie =
               "sub_number_premium=" +
               phone +
               "; expires=" +
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
               "; path=/";
           }
         
@@ -288,6 +288,8 @@ document
                 console.log("Amount changed")
                 amount_sent = data.amount 
                 no_days_left = data.no_days_left
+                no_days_left_ = data.no_days_left
+
               }
               console.log('Success:', data)
             })
@@ -344,14 +346,32 @@ document
           btn.innerHTML = btnText;
           document.cookie =
             "hasSubscribed=true; expires=" +
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+            new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
             "; path=/";
-          document.cookie =
-            "sub_number=" +
-            phone +
-            "; expires=" +
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
-            "; path=/";
+          if(subPlan == "Basic"){
+              document.cookie =
+                "sub_number=" +
+                phone +
+                "; expires=" +
+                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
+                "; path=/";
+            }
+          if(subPlan == "Premium"){
+              document.cookie =
+                "sub_number=" +
+                phone +
+                "; expires=" +
+                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
+                "; path=/";
+                document.cookie =
+                "sub_number_premium=" +
+                phone +
+                "; expires=" +
+                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
+                "; path=/";
+            }
+          
+
           // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
           const apiUrl = `/api/request?phone=${phone}`;
 
@@ -450,7 +470,7 @@ btn.addEventListener("click", () => {
             }).then((value) => {
               document.cookie =
                 "hasSubscribedTruly=true; expires=" +
-                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
                 "; path=/";
               window.location.href =
                 "https://wa.me/2349057642334?text=Hello%20Binx%20AI";
