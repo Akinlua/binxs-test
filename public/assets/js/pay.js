@@ -14,10 +14,13 @@ hasPaid = false;
 const cookieName = "hasSubscribed";
 const cookieName2 = "sub_number";
 const cookieName3 = "hasSubscribedTruly";
+const cookieName4 = "sub_number_premium";
 const cookies = document.cookie.split(";");
 
 let cookieValue = null;
 let subNumber = null;
+let subNumber_Premium = null;
+
 let hasSubscribedTruly = null;
 for (let i = 0; i < cookies.length; i++) {
   const cookie = cookies[i].trim();
@@ -40,7 +43,13 @@ for (let i = 0; i < cookies.length; i++) {
     break;
   }
 }
-
+for (let i = 0; i < cookies.length; i++) {
+  const cookie = cookies[i].trim();
+  if (cookie.startsWith("sub_number_premium=")) {
+    subNumber_Premium = cookie.substring(cookieName4.length + 1);
+    break;
+  }
+}
 switch (plan) {
   case "basic":
     amount = 300000;
@@ -48,7 +57,7 @@ switch (plan) {
     subPlan = "Basic";
     break;
   case "premium":
-    amount = 500000;
+    amount = 600000;
     pls.innerHTML = "You have chosen a premium premium plan";
     subPlan = "Premium";
     break;
@@ -59,7 +68,8 @@ switch (plan) {
     break;
 }
 
-function payWithPaystack(email, phone, amount, name, plan) {
+function payWithPaystack(email, phone, amount, plan, no_days_left) {
+  console.log(plan)
   var handler = PaystackPop.setup({
     key: publicKey,
     email: email,
@@ -73,11 +83,30 @@ function payWithPaystack(email, phone, amount, name, plan) {
 
       console.log(response);
 
+      // Make a POST request to save the data to database
+      fetch('/api/users', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            email: email,
+            subscription: plan,
+            phone: phone,
+            no_days_left: no_days_left
+        })
+        })
+        .then(response => response.json())
+        .then(data => console.log('Success:', data))
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+
       Swal.fire({
         icon: "success",
         title: "Payment complete!",
         text: "Reference: " + response.reference,
-      }).then((value) => {
+      }).then( (value) => {
         hasPaid = true;
         btn.disabled = true;
         btnText = "Please wait...";
@@ -86,15 +115,34 @@ function payWithPaystack(email, phone, amount, name, plan) {
           "hasSubscribed=true; expires=" +
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
           "; path=/";
-        document.cookie =
-          "sub_number=" +
-          phone +
-          "; expires=" +
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
-          "; path=/";
+        console.log("plan", plan)
+        if(plan == "Basic"){
+            document.cookie =
+              "sub_number=" +
+              phone +
+              "; expires=" +
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              "; path=/";
+          }
+          if(plan == "Premium"){
+            document.cookie =
+              "sub_number=" +
+              phone +
+              "; expires=" +
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              "; path=/";
+              document.cookie =
+              "sub_number_premium=" +
+              phone +
+              "; expires=" +
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString() +
+              "; path=/";
+          }
+        
+
+
         // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
         const apiUrl = `/api/request?phone=${phone}`;
-
 
         // Make a GET request to the API
         fetch(apiUrl)
@@ -160,7 +208,7 @@ phoneField.addEventListener("input", function (event) {
 // Add event listener to the form submit event
 document
   .getElementById("paymentForm")
-  .addEventListener("submit", function (event) {
+  .addEventListener("submit", async function (event) {
     const fname = document.getElementById("firstName").value;
     const lname = document.getElementById("lastName").value;
     const name = fname + " " + lname;
@@ -183,9 +231,33 @@ document
       event.preventDefault();
 
       const phoneNumber = countryCode + phone.trim();
+      console.log(subNumber,subNumber_Premium, hasSubscribedTruly, cookieValue)
+      let check_duplicate = false
+      if(subPlan == "Premium"){
+        console.log("PremiumPremiumPremium")
+
+        if (
+          cookieValue == "true" &&
+           (hasSubscribedTruly == "true") & (subNumber_Premium == phoneNumber)
+        ){
+          check_duplicate = true
+          console.log(true)
+        }
+      }
+      if(subPlan == "Basic"){
+        console.log("BasicBasicBasic")
+
+        if (
+          cookieValue == "true" &&
+          (subNumber == phoneNumber) & (hasSubscribedTruly == "true")
+        ){
+          check_duplicate = true
+          console.log(true)
+        }
+      }
+      console.log("check_duplicate", check_duplicate)
       if (
-        cookieValue == "true" &&
-        (subNumber == phoneNumber) & (hasSubscribedTruly == "true")
+       check_duplicate == true
       ) {
         Swal.fire({
           icon: "info",
@@ -193,12 +265,77 @@ document
           text: "Seems this number has been subscribed already, please try different number!",
         });
       } else {
-        if (!hasPaid && subNumber != phoneNumber) {
-          payWithPaystack(email, phoneNumber, amount, plan);
+          let check_again = false
+          if(subPlan == "Basic"){
+            if (!hasPaid && subNumber != phoneNumber) {
+              check_again= true
+            }
+          }
+          if(subPlan == "Premium"){
+            if (!hasPaid && subNumber_Premium != phoneNumber) {
+              check_again= true
+            }
+          }
+        if (check_again == true)  {
+          // Make a GET request to get the amount to pay if subscription exist and is a basic plan
+         let amount_sent
+         let no_days_left
+          await fetch(`/api/get_amount?phone=${phoneNumber}&plan=${subPlan}`)
+            .then(response => response.json())
+            .then(data => {
+              // change amount is needed
+              if (data.status == 200 && data.failed == false ){
+                console.log("Amount changed")
+                amount_sent = data.amount 
+                no_days_left = data.no_days_left
+              }
+              console.log('Success:', data)
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+          });
+
+          // then pay with amount
+          console.log(amount_sent)
+          if(!amount_sent){
+            amount_sent = amount
+          }
+          if(!no_days_left){
+            no_days_left = 30
+          }
+          console.log(amount_sent)
+          console.log(no_days_left)
+
+          payWithPaystack(email, phoneNumber, amount_sent, subPlan, no_days_left);
         }
       }
+      let check_again2 = false
+      if(subPlan == "Basic"){
+        if (hasPaid && subNumber != phoneNumber) {
+          check_again2= true
+        }
+      }
+      if(subPlan == "Premium"){
+        if (hasPaid && subNumber_Premium != phoneNumber) {
+          check_again2= true
+        }
+      }
+
+      //for the below
+      let check_again3 = false
+      if(subPlan == "Basic"){
+        if (subNumber == phoneNumber) {
+          check_again3= true
+        }
+      }
+      if(subPlan == "Premium"){
+        if (subNumber_Premium == phoneNumber) {
+          check_again3= true
+        }
+      }
+//////////
       if (
-        (hasPaid && subNumber != phoneNumber) ||
+        check_again2 == true ||
         (hasPaid && !hasSubscribedTruly)
       ) {
         if (!sentOtp) {
@@ -265,7 +402,7 @@ document
         }
       } else if (
         hasPaid &&
-        subNumber == phoneNumber &&
+        check_again3 == true &&
         hasSubscribedTruly == "true"
       ) {
         Swal.fire({
