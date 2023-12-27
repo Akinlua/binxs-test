@@ -232,6 +232,127 @@ app.get('/api/get_amount', async (req, res) => {
 
 
 
+app.get('/api/confirm', async (req, res) => {
+
+  // api url only for premium subscriotion payments
+    const {phone, plan} = req.query
+    const phone_ = phone.trim()
+    console.log(phone_)
+    console.log(phone_)
+
+    
+    console.log(req.query)
+    if(!phone || !plan){
+      return res.json({
+        status: 404,
+        failed: true,
+        message: "phone field and plan filled must not be empty"
+      })
+    }
+
+    const user_basic = await User.find({phone_number: phone.trim(), subscription: "Basic"}).sort("-createdAt")
+    const user_premium = await User.find({phone_number: phone.trim(), subscription: "Premium"}).sort("-createdAt")
+
+
+    let user_subscription_basic = {}
+    for(const i of user_basic){
+        //check and get the user subscription that is not expired
+        let date_ = new Date(); // today's date
+        const date = convert_date(date_)
+        let givenDate = new Date(date);
+        let specificDate = new Date(i.expiry_dae);
+        const isWithin = isWithin30DaysBefore(givenDate, specificDate)
+        if(isWithin == true){
+          user_subscription_basic = i
+          break
+        }
+    }
+
+    let user_subscription_premium = {}
+
+    for(const i of user_premium){
+      //check and get the user subscription that is not expired
+      let date_ = new Date(); // today's date
+      const date = convert_date(date_)
+      let givenDate = new Date(date);
+      let specificDate = new Date(i.expiry_dae);
+      const isWithin = isWithin30DaysBefore(givenDate, specificDate)
+      if(isWithin == true){
+        user_subscription_premium = i
+        break
+      }
+    }
+
+    let paid = false
+    let otp;
+
+    if(plan == "Basic"){
+      if(Object.keys(user_subscription_basic).length > 0 || Object.keys(user_subscription_premium).length > 0){
+        paid = true
+      }
+      if(Object.keys(user_subscription_basic).length > 0){
+        otp = user_subscription_basic.otp
+      } else {
+        otp = true
+      }
+    }
+
+    if(plan == "Premium"){
+      if(Object.keys(user_subscription_premium).length > 0){
+        paid = true
+      }
+      if(Object.keys(user_subscription_premium).length > 0){
+        otp = user_subscription_premium.otp
+      } else {
+        otp = true
+      }
+    }
+    
+
+    res.json({
+      status: 200,
+      failed: false,
+      paid: paid,
+      otp: otp
+    })
+    
+})
+
+
+app.post('/api/set_otp', async ( req, res) => {
+  const {phone, plan} = req.body
+
+
+  let phone_ = phone.replace('+', '');
+  console.log(phone_)
+
+  const user = await User.find({phone_number: phone_, subscription: plan})
+
+  let user_subscription = {}
+  for(const i of user){
+      //check and get the user subscription that is not expired
+      let date_ = new Date(); // today's date
+      const date = convert_date(date_)
+      let givenDate = new Date(date);
+      let specificDate = new Date(i.expiry_dae);
+      const isWithin = isWithin30DaysBefore(givenDate, specificDate)
+      if(isWithin == true){
+        user_subscription = i
+        break
+      }
+  }
+
+  const id = user_subscription._id
+
+  const set_otp = await User.findOneAndUpdate({_id: id}, {otp: true})
+
+  res.json({
+    status: 200,
+    message: "Otp Successfully Sent"
+  })
+
+})
+
 const port = 3001;
 app.listen(port, async () => {
   //connect DB

@@ -22,6 +22,10 @@ const UserSchema = new Schema({
     type: mongoose.Schema.Types.Mixed,
     required: [true, 'Please provide a scheduled date'],
   },
+  otp: {
+    type: Boolean,
+    default: false
+  }
 }, {timestamps: true});
 
 module.exports = mongoose.model('User', UserSchema);

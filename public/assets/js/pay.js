@@ -111,35 +111,6 @@ function payWithPaystack(email, phone, amount, plan, no_days_left) {
         btn.disabled = true;
         btnText = "Please wait...";
         btn.innerHTML = btnText;
-        document.cookie =
-          "hasSubscribed=true; expires=" +
-          new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
-          "; path=/";
-        console.log("plan", plan)
-        if(plan == "Basic"){
-            document.cookie =
-              "sub_number=" +
-              phone +
-              "; expires=" +
-              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
-              "; path=/";
-          }
-          if(plan == "Premium"){
-            document.cookie =
-              "sub_number=" +
-              phone +
-              "; expires=" +
-              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
-              "; path=/";
-              document.cookie =
-              "sub_number_premium=" +
-              phone +
-              "; expires=" +
-              new Date(Date.now() + no_days_left * 24 * 60 * 60 * 1000).toUTCString() +
-              "; path=/";
-          }
-        
-
 
         // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
         const apiUrl = `/api/request?phone=${phone}`;
@@ -221,217 +192,165 @@ document
     const otpValue = document.getElementById("otp").value;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (
-      fname.trim() !== "" &&
-      lname.trim() !== "" &&
-      phone.trim() !== "" &&
-      emailRegex.test(email)
-    ) {
+    if(!otpValue){
+      if (
+        fname.trim() !== "" &&
+        lname.trim() !== "" &&
+        phone.trim() !== "" &&
+        emailRegex.test(email)
+      ) {
+        // Display the OTP input field
+        event.preventDefault();
+
+        const phoneNumber = countryCode + phone.trim();
+
+        // CHECK IF THE NUMBER HAS PAID
+
+        // get request
+        let paid_before = true
+        let otp_ = true
+
+        await fetch(`/api/confirm?phone=${phoneNumber}&plan=${subPlan}`)
+          .then(response => response.json())
+          .then(data => {
+            // change amount is needed
+            if (data.status == 200 && data.failed == false ){
+              paid_before = data.paid 
+              otp_ = data.otp
+
+            }
+            console.log('Success:', data)
+          })
+          .catch((error) => {
+              console.error('Error:', error);
+        });
+
+
+        if (
+          paid_before == true && otp_ == true
+        ) {
+          Swal.fire({
+            icon: "info",
+            title: "Duplicate Subscription",
+            text: "Seems this number has been subscribed already, please try different number!",
+          });
+        } else {
+            
+          if (paid_before == false)  {
+            // Make a GET request to get the amount to pay if subscription exist and is a basic plan
+          let amount_sent
+          let no_days_left
+            await fetch(`/api/get_amount?phone=${phoneNumber}&plan=${subPlan}`)
+              .then(response => response.json())
+              .then(data => {
+                // change amount is needed
+                if (data.status == 200 && data.failed == false ){
+                  console.log("Amount changed")
+                  amount_sent = data.amount 
+                  no_days_left = data.no_days_left
+                  no_days_left_ = data.no_days_left
+
+                }
+                console.log('Success:', data)
+              })
+              .catch((error) => {
+                  console.error('Error:', error);
+            });
+
+            // then pay with amount
+            console.log(amount_sent)
+            if(!amount_sent){
+              amount_sent = amount
+            }
+            if(!no_days_left){
+              no_days_left = 30
+            }
+            console.log(amount_sent)
+            console.log(no_days_left)
+
+            payWithPaystack(email, phoneNumber, amount_sent, subPlan, no_days_left);
+          }
+        }
+
+
+      
+        if (
+          paid_before == true && otp_ == false
+        ) {
+          if (!sentOtp) {
+            btn.disabled = true;
+            btnText = "Please wait...";
+            btn.innerHTML = btnText;
+            console.log("no_days_left_", no_days_left_)
+
+            console.log(phone)
+            console.log(phoneNumber)
+
+            // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
+            const apiUrl = `/api/request?phone=${phoneNumber}`;
+
+
+            // Make a GET request to the API
+            fetch(apiUrl)
+              .then((response) => response.json())
+              .then((data) => {
+              console.log(data)
+              
+                if (data.successful === "Open Your WhatsApp!") {
+                  document.getElementById("otp-div").classList.remove("d-none");
+
+                  Swal.fire({
+                    icon: "success",
+                    title: "Code Sent",
+                    text: "OTP code have been sent to your whatsapp!",
+                  }).then((value) => {
+                    btn.disabled = false;
+                    btnText = "Continue";
+                    btn.innerHTML = btnText;
+                    sentOtp = true;
+
+                  });
+                } else if (data.cooldown) {
+                  Swal.fire({
+                    icon: "info",
+                    title: "Cooldown",
+                    text: data.cooldown,
+                  });
+                } else {
+                  Swal.fire({
+                    icon: "error",
+                    title: "Invalid Whatsapp Number",
+                    text: "Oopps! Seems you provided an invalid WhatsApp number",
+                  }).then((value) => {
+                    btn.disabled = false;
+                    btnText = "Continue";
+                    btn.innerHTML = btnText;
+                    sentOtp = false;
+                  });
+                }
+                console.log(data);
+              })
+              .catch((error) => {
+                // Handle any errors
+                console.error(error);
+              });
+          }
+        } else if (
+          paid_before == true && otp_ == true
+        ) {
+          Swal.fire({
+            icon: "info",
+            title: "Duplicate Subscription",
+            text: "Seems this number has been subscribed already, please try different number!",
+          });
+        }
+      }
+
+    } else {
       // Display the OTP input field
       event.preventDefault();
-
-      const phoneNumber = countryCode + phone.trim();
-      console.log(subNumber,subNumber_Premium, hasSubscribedTruly, cookieValue)
-      let check_duplicate = false
-      if(subPlan == "Premium"){
-        console.log("PremiumPremiumPremium")
-
-        if (
-          cookieValue == "true" &&
-           (hasSubscribedTruly == "true") & (subNumber_Premium == phoneNumber)
-        ){
-          check_duplicate = true
-          console.log(true)
-        }
-      }
-      if(subPlan == "Basic"){
-        console.log("BasicBasicBasic")
-
-        if (
-          cookieValue == "true" &&
-          (subNumber == phoneNumber) & (hasSubscribedTruly == "true")
-        ){
-          check_duplicate = true
-          console.log(true)
-        }
-      }
-      console.log("check_duplicate", check_duplicate)
-      if (
-       check_duplicate == true
-      ) {
-        Swal.fire({
-          icon: "info",
-          title: "Duplicate Subscription",
-          text: "Seems this number has been subscribed already, please try different number!",
-        });
-      } else {
-          let check_again = false
-          if(subPlan == "Basic"){
-            if (!hasPaid && subNumber != phoneNumber) {
-              check_again= true
-            }
-          }
-          if(subPlan == "Premium"){
-            if (!hasPaid && subNumber_Premium != phoneNumber) {
-              check_again= true
-            }
-          }
-        if (check_again == true)  {
-          // Make a GET request to get the amount to pay if subscription exist and is a basic plan
-         let amount_sent
-         let no_days_left
-          await fetch(`/api/get_amount?phone=${phoneNumber}&plan=${subPlan}`)
-            .then(response => response.json())
-            .then(data => {
-              // change amount is needed
-              if (data.status == 200 && data.failed == false ){
-                console.log("Amount changed")
-                amount_sent = data.amount 
-                no_days_left = data.no_days_left
-                no_days_left_ = data.no_days_left
-
-              }
-              console.log('Success:', data)
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-          });
-
-          // then pay with amount
-          console.log(amount_sent)
-          if(!amount_sent){
-            amount_sent = amount
-          }
-          if(!no_days_left){
-            no_days_left = 30
-          }
-          console.log(amount_sent)
-          console.log(no_days_left)
-
-          payWithPaystack(email, phoneNumber, amount_sent, subPlan, no_days_left);
-        }
-      }
-      let check_again2 = false
-      if(subPlan == "Basic"){
-        if (hasPaid && subNumber != phoneNumber) {
-          check_again2= true
-        }
-      }
-      if(subPlan == "Premium"){
-        if (hasPaid && subNumber_Premium != phoneNumber) {
-          check_again2= true
-        }
-      }
-
-      //for the below
-      let check_again3 = false
-      if(subPlan == "Basic"){
-        if (subNumber == phoneNumber) {
-          check_again3= true
-        }
-      }
-      if(subPlan == "Premium"){
-        if (subNumber_Premium == phoneNumber) {
-          check_again3= true
-        }
-      }
-//////////
-      if (
-        check_again2 == true ||
-        (hasPaid && !hasSubscribedTruly)
-      ) {
-        if (!sentOtp) {
-          btn.disabled = true;
-          btnText = "Please wait...";
-          btn.innerHTML = btnText;
-          document.cookie =
-            "hasSubscribed=true; expires=" +
-            new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
-            "; path=/";
-          if(subPlan == "Basic"){
-              document.cookie =
-                "sub_number=" +
-                phone +
-                "; expires=" +
-                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
-                "; path=/";
-            }
-          if(subPlan == "Premium"){
-              document.cookie =
-                "sub_number=" +
-                phone +
-                "; expires=" +
-                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
-                "; path=/";
-                document.cookie =
-                "sub_number_premium=" +
-                phone +
-                "; expires=" +
-                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
-                "; path=/";
-            }
-          
-
-          // const apiUrl = `http://binxai.tekcify.com:4000/request?phone=${phone}`;
-          const apiUrl = `/api/request?phone=${phone}`;
-
-
-          // Make a GET request to the API
-          fetch(apiUrl)
-            .then((response) => response.json())
-            .then((data) => {
-            console.log(data)
-            
-              if (data.successful === "Open Your WhatsApp!") {
-                document.getElementById("otp-div").classList.remove("d-none");
-
-                Swal.fire({
-                  icon: "success",
-                  title: "Code Sent",
-                  text: "OTP code have been sent to your whatsapp!",
-                }).then((value) => {
-                  btn.disabled = false;
-                  btnText = "Continue";
-                  btn.innerHTML = btnText;
-                  sentOtp = true;
-                });
-              } else if (data.cooldown) {
-                Swal.fire({
-                  icon: "info",
-                  title: "Cooldown",
-                  text: data.cooldown,
-                });
-              } else {
-                Swal.fire({
-                  icon: "error",
-                  title: "Invalid Whatsapp Number",
-                  text: "Oopps! Seems you provided an invalid WhatsApp number",
-                }).then((value) => {
-                  btn.disabled = false;
-                  btnText = "Continue";
-                  btn.innerHTML = btnText;
-                  sentOtp = false;
-                });
-              }
-              console.log(data);
-            })
-            .catch((error) => {
-              // Handle any errors
-              console.error(error);
-            });
-        }
-      } else if (
-        hasPaid &&
-        check_again3 == true &&
-        hasSubscribedTruly == "true"
-      ) {
-        Swal.fire({
-          icon: "info",
-          title: "Duplicate Subscription",
-          text: "Seems this number has been subscribed already, please try different number!",
-        });
-      }
     }
+
   });
 
 btn.addEventListener("click", () => {
@@ -453,7 +372,7 @@ btn.addEventListener("click", () => {
 
       fetch(apiUrl)
         .then((response) => response.json())
-        .then((data) => {
+        .then(async (data) => {
           console.log(data)
 
           if (data.failed === "Invalid or Expired Code") {
@@ -463,11 +382,30 @@ btn.addEventListener("click", () => {
               text: "The OTP code is invalid or has expired.",
             });
           } else if (data.successful.startsWith("Congratulations")) {
+            // Set OPT True to the phone number database
+            
+            await fetch('/api/set_otp', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                  plan: subPlan,
+                  phone: phoneNumber
+              })
+              })
+              .then(response => response.json())
+              .then(data => console.log('Success:', data))
+              .catch((error) => {
+                  console.error('Error:', error);
+            });
+
             Swal.fire({
               icon: "info",
               title: "Congratulations 🎊",
               text: `You are now registered as ${subPlan} user.`,
             }).then((value) => {
+              console.log("no_days_left_", no_days_left_)
               document.cookie =
                 "hasSubscribedTruly=true; expires=" +
                 new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
