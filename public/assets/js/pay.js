@@ -10,7 +10,6 @@ btn = document.getElementById("continueBtn");
 subPlan = "Basic";
 btnText = "Continue";
 hasPaid = false;
-let no_days_left_ = 30
 const cookieName = "hasSubscribed";
 const cookieName2 = "sub_number";
 const cookieName3 = "hasSubscribedTruly";
@@ -68,7 +67,7 @@ switch (plan) {
     break;
 }
 
-function payWithPaystack(email, phone, amount, plan, no_days_left) {
+function payWithPaystack(email, phone, amount, plan) {
   console.log(plan)
   var handler = PaystackPop.setup({
     key: publicKey,
@@ -92,8 +91,7 @@ function payWithPaystack(email, phone, amount, plan, no_days_left) {
         body: JSON.stringify({
             email: email,
             subscription: plan,
-            phone: phone,
-            no_days_left: no_days_left
+            phone: phone
         })
         })
         .then(response => response.json())
@@ -239,7 +237,6 @@ document
           if (paid_before == false)  {
             // Make a GET request to get the amount to pay if subscription exist and is a basic plan
           let amount_sent
-          let no_days_left
             await fetch(`/api/get_amount?phone=${phoneNumber}&plan=${subPlan}`)
               .then(response => response.json())
               .then(data => {
@@ -247,8 +244,6 @@ document
                 if (data.status == 200 && data.failed == false ){
                   console.log("Amount changed")
                   amount_sent = data.amount 
-                  no_days_left = data.no_days_left
-                  no_days_left_ = data.no_days_left
 
                 }
                 console.log('Success:', data)
@@ -262,13 +257,9 @@ document
             if(!amount_sent){
               amount_sent = amount
             }
-            if(!no_days_left){
-              no_days_left = 30
-            }
             console.log(amount_sent)
-            console.log(no_days_left)
 
-            payWithPaystack(email, phoneNumber, amount_sent, subPlan, no_days_left);
+            payWithPaystack(email, phoneNumber, amount_sent, subPlan);
           }
         }
 
@@ -281,7 +272,6 @@ document
             btn.disabled = true;
             btnText = "Please wait...";
             btn.innerHTML = btnText;
-            console.log("no_days_left_", no_days_left_)
 
             console.log(phone)
             console.log(phoneNumber)
@@ -405,11 +395,7 @@ btn.addEventListener("click", () => {
               title: "Congratulations 🎊",
               text: `You are now registered as ${subPlan} user.`,
             }).then((value) => {
-              console.log("no_days_left_", no_days_left_)
-              document.cookie =
-                "hasSubscribedTruly=true; expires=" +
-                new Date(Date.now() + no_days_left_ * 24 * 60 * 60 * 1000).toUTCString() +
-                "; path=/";
+              
               window.location.href =
                 "https://wa.me/2349057642334?text=Hello%20Binx%20AI";
             });

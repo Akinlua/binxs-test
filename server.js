@@ -124,12 +124,12 @@ function howManyDaysPast(currentDate, pastDate){
 }
 
 app.post('/api/users', async (req, res) => {
-  const {email, subscription, phone, no_days_left } = req.body
+  const {email, subscription, phone } = req.body
   console.log(req.body)
 
   //get expiry dagte
   let today = new Date();
-  const date_30 = add30Days(today, no_days_left)
+  const date_30 = add30Days(today, 30)
   const date = convert_date(date_30)
   const date2 = convert_date(today)
 
@@ -218,14 +218,13 @@ app.get('/api/get_amount', async (req, res) => {
     // calculate amount used from 3k
     const amount_used_up = 100 * no_days_used
     const amount_left_Basic = 3000-amount_used_up
-    const amount_to_pay_Premium = 200 * (30-no_days_used)
-    const total_Amount = amount_to_pay_Premium-amount_left_Basic
+    const amount_to_pay_Premium = 6000 - amount_left_Basic
+    const total_Amount = amount_to_pay_Premium
 
     res.json({
       status: 200,
       amount: total_Amount * 100, //in kobo
       failed: false,
-      no_days_left: 30-no_days_used
     })
     
 })
@@ -293,6 +292,9 @@ app.get('/api/confirm', async (req, res) => {
       if(Object.keys(user_subscription_basic).length > 0){
         otp = user_subscription_basic.otp
       } else {
+        otp = true
+      }
+      if(Object.keys(user_subscription_premium).length > 0){
         otp = true
       }
     }
